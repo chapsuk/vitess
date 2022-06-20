@@ -369,13 +369,17 @@ func (uvs *uvstreamer) Stream() error {
 		return err
 	}
 	if len(uvs.plans) > 0 {
-		log.Info("TablePKs is not nil: starting vs.copy()")
+		log.Info("TablePKs is not nil: starting uvs.copy()")
 		if err := uvs.copy(uvs.ctx); err != nil {
 			log.Infof("uvstreamer.Stream() copy returned with err %s", err)
 			uvs.vse.errorCounts.Add("Copy", 1)
 			return err
 		}
-		uvs.sendTestEvent("Copy Done")
+		if err := uvs.copyDone(); err != nil {
+			log.Infof("uvstreamer.Stream() copyDone returned with err %s", err)
+			uvs.vse.errorCounts.Add("Copy", 1)
+			return err
+		}
 	}
 	vs := newVStreamer(uvs.ctx, uvs.cp, uvs.se, mysql.EncodePosition(uvs.pos), mysql.EncodePosition(uvs.stopPos), uvs.filter, uvs.getVSchema(), uvs.send, "replicate", uvs.vse)
 
@@ -415,6 +419,15 @@ func (uvs *uvstreamer) getVSchema() *localVSchema {
 
 func (uvs *uvstreamer) setCopyState(tableName string, qr *querypb.QueryResult) {
 	uvs.plans[tableName].tablePK.Lastpk = qr
+}
+
+func (uvs *uvstreamer) copyDone() error {
+	return uvs.send([]*binlogdatapb.VEvent{
+		{
+			Type: binlogdatapb.VEventType_OTHER,
+			Gtid: "Copy Done",
+		},
+	})
 }
 
 // dummy event sent only in test mode
