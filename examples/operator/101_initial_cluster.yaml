@@ -34,6 +34,9 @@ spec:
             name: example-cluster-config
             key: users.json
       replicas: 1
+      extraEnv:
+        - name: TZ
+          value: Europe/Berlin
       resources:
         requests:
           cpu: 100m
@@ -99,6 +102,9 @@ spec:
           - cell: zone1
             type: replica
             replicas: 2
+            extraEnv:
+              - name: TZ
+                value: Europe/Berlin
             vttablet:
               extraFlags:
                 db-charset: utf8mb4
